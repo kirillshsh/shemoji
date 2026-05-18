@@ -67,10 +67,12 @@ def settings_text(
     default_padding: int,
     default_long_side: int,
 ) -> str:
+    padding_mark = " ⭐" if current_padding == default_padding else ""
+    size_mark = " ⭐" if current_long_side == default_long_side else ""
     return f"""<tg-emoji emoji-id="6021582331251268218">⚙️</tg-emoji><b>Настройки</b>
 
-• <b>Паддинг:</b> {current_padding}px (по умолчанию — {default_padding}px)
-• <b>Размер:</b> {current_long_side} по длинной стороне (по умолчанию — {default_long_side})
+• <b>Паддинг:</b> {current_padding}px{padding_mark} (по умолчанию — {default_padding}px)
+• <b>Размер:</b> {current_long_side}x{current_long_side}{size_mark} (по умолчанию — {default_long_side}x{default_long_side})
 
 <tg-emoji emoji-id="5472146462362048818">💡</tg-emoji><b>Как это работает:</b>
 • <b>Паддинг:</b> Telegram по-разному рендерит эмодзи на ПК и телефонах — картинка может искажаться или разбиваться полосами. Паддинг добавляет невидимые отступы сверху и снизу, компенсируя эту разницу. Подбирается экспериментально.

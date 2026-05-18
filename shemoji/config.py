@@ -14,7 +14,7 @@ class AppConfig:
     db_path: Path = Path("bot.sqlite3")
     default_padding: int = 3
     max_padding: int = 5
-    default_long_side: int = 5
+    default_long_side: int = 3
     max_tiles: int = 50
     max_video_seconds: float = 3.0
     max_video_tile_bytes: int = 240_000

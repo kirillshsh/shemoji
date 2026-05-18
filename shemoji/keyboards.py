@@ -67,11 +67,13 @@ def settings_keyboard(
 ) -> InlineKeyboardMarkup:
     size_values = size_options(config)
     min_size, max_size = size_values[0], size_values[-1]
+    padding_mark = " ⭐" if current_padding == config.default_padding else ""
+    size_mark = " ⭐" if current_long_side == config.default_long_side else ""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(text="➖", callback_data=f"padding:{max(0, current_padding - 1)}"),
-                InlineKeyboardButton(text=f"Паддинг: {current_padding}", callback_data="noop"),
+                InlineKeyboardButton(text=f"Паддинг: {current_padding}px{padding_mark}", callback_data="noop"),
                 InlineKeyboardButton(
                     text="➕",
                     callback_data=f"padding:{min(config.max_padding, current_padding + 1)}",
@@ -79,7 +81,10 @@ def settings_keyboard(
             ],
             [
                 InlineKeyboardButton(text="➖", callback_data=f"size:{max(min_size, current_long_side - 1)}"),
-                InlineKeyboardButton(text=f"Размер: {current_long_side}", callback_data="noop"),
+                InlineKeyboardButton(
+                    text=f"Размер: {current_long_side}x{current_long_side}{size_mark}",
+                    callback_data="noop",
+                ),
                 InlineKeyboardButton(text="➕", callback_data=f"size:{min(max_size, current_long_side + 1)}"),
             ],
             [InlineKeyboardButton(text="🖼 Посмотреть примеры", callback_data=SETTINGS_EXAMPLES_CALLBACK)],
