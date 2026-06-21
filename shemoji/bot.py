@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import json
 
 from aiogram import Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -33,7 +34,10 @@ async def run() -> None:
     )
     job_limiter = JobLimiter(config.media_job_concurrency, config.per_user_job_concurrency)
 
-    dispatcher = Dispatcher(config=config, store=store, job_limiter=job_limiter)
+    with open(config.saxophone_path, "r") as f:
+        saxophone: list[str] = json.load(f)
+
+    dispatcher = Dispatcher(config=config, store=store, job_limiter=job_limiter, saxophone=saxophone)
     dispatcher.include_router(router)
 
     await bot.set_my_commands(

@@ -57,7 +57,8 @@ class SettingsStore:
             """
             CREATE TABLE IF NOT EXISTS user_settings (
                 user_id INTEGER PRIMARY KEY,
-                padding INTEGER NOT NULL
+                padding INTEGER NOT NULL,
+                saxophone INTEGER NOT NULL
             )
             """
         )
@@ -137,11 +138,11 @@ class SettingsStore:
     def set_padding(self, user_id: int, padding: int) -> None:
         self._conn.execute(
             """
-            INSERT INTO user_settings(user_id, padding, long_side)
-            VALUES(?, ?, ?)
+            INSERT INTO user_settings(user_id, padding, long_side, saxophone)
+            VALUES(?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET padding = excluded.padding
             """,
-            (user_id, padding, self.get_long_side(user_id)),
+            (user_id, padding, self.get_long_side(user_id), int(self.get_saxophone(user_id))),
         )
         self._conn.commit()
 
@@ -157,11 +158,31 @@ class SettingsStore:
     def set_long_side(self, user_id: int, long_side: int) -> None:
         self._conn.execute(
             """
-            INSERT INTO user_settings(user_id, padding, long_side)
-            VALUES(?, ?, ?)
+            INSERT INTO user_settings(user_id, padding, long_side, saxophone)
+            VALUES(?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET long_side = excluded.long_side
             """,
-            (user_id, self.get_padding(user_id), long_side),
+            (user_id, self.get_padding(user_id), long_side, int(self.get_saxophone(user_id))),
+        )
+        self._conn.commit()
+
+    def get_saxophone(self, user_id: int) -> bool:
+        row = self._conn.execute(
+            "SELECT saxophone FROM user_settings WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        return bool(row[0])
+
+    def set_saxophone(self, user_id: int, saxophone: bool) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO user_settings(user_id, padding, long_side, saxophone)
+            VALUES(?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET saxophone = excluded.saxophone
+            """,
+            (user_id, self.get_padding(user_id), self.get_long_side(user_id), int(saxophone)),
         )
         self._conn.commit()
 

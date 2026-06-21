@@ -64,6 +64,7 @@ def settings_keyboard(
     current_padding: int,
     current_long_side: int,
     config: AppConfig,
+    saxophone: bool,
 ) -> InlineKeyboardMarkup:
     size_values = size_options(config)
     min_size, max_size = size_values[0], size_values[-1]
@@ -88,5 +89,6 @@ def settings_keyboard(
                 InlineKeyboardButton(text="➕", callback_data=f"size:{min(max_size, current_long_side + 1)}"),
             ],
             [InlineKeyboardButton(text="🖼 Посмотреть примеры", callback_data=SETTINGS_EXAMPLES_CALLBACK)],
+            [InlineKeyboardButton(text=f"Саксофон: {'✅' if saxophone else '❌'}", callback_data=f"saxophone:{'off' if saxophone else 'on'}")]
         ]
     )

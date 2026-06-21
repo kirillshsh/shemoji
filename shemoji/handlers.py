@@ -132,10 +132,11 @@ async def view_packs(message: Message, store: SettingsStore) -> None:
 async def send_settings_message(message: Message, store: SettingsStore, config: AppConfig) -> None:
     padding = store.get_padding(message.from_user.id)
     long_side = store.get_long_side(message.from_user.id)
+    saxophone = store.get_saxophone(message.from_user.id)
     await message.answer(
-        settings_text(padding, long_side, config.default_padding, config.default_long_side),
+        settings_text(padding, long_side, config.default_padding, config.default_long_side, saxophone),
         parse_mode=ParseMode.HTML,
-        reply_markup=settings_keyboard(padding, long_side, config),
+        reply_markup=settings_keyboard(padding, long_side, config, saxophone),
     )
 
 
@@ -162,10 +163,11 @@ async def set_padding_callback(callback: CallbackQuery, store: SettingsStore, co
 
     store.set_padding(callback.from_user.id, padding)
     long_side = store.get_long_side(callback.from_user.id)
+    saxophone = store.get_saxophone(callback.from_user.id)
     await callback.message.edit_text(
-        settings_text(padding, long_side, config.default_padding, config.default_long_side),
+        settings_text(padding, long_side, config.default_padding, config.default_long_side, saxophone),
         parse_mode=ParseMode.HTML,
-        reply_markup=settings_keyboard(padding, long_side, config),
+        reply_markup=settings_keyboard(padding, long_side, config, saxophone),
     )
     await callback.answer(f"Паддинг: {padding}px")
 
@@ -182,10 +184,11 @@ async def set_size_callback(callback: CallbackQuery, store: SettingsStore, confi
 
     store.set_long_side(callback.from_user.id, long_side)
     padding = store.get_padding(callback.from_user.id)
+    saxophone = store.get_saxophone(callback.from_user.id)
     await callback.message.edit_text(
-        settings_text(padding, long_side, config.default_padding, config.default_long_side),
+        settings_text(padding, long_side, config.default_padding, config.default_long_side, saxophone),
         parse_mode=ParseMode.HTML,
-        reply_markup=settings_keyboard(padding, long_side, config),
+        reply_markup=settings_keyboard(padding, long_side, config, saxophone),
     )
     await callback.answer(f"Размер: {long_side}")
 
@@ -194,6 +197,18 @@ async def set_size_callback(callback: CallbackQuery, store: SettingsStore, confi
 async def noop_callback(callback: CallbackQuery) -> None:
     await callback.answer()
 
+@router.callback_query(F.data.startswith("saxophone:"))
+async def set_saxophone_callback(callback: CallbackQuery, store: SettingsStore, config: AppConfig) -> None:
+    saxophone = callback.data.split(":", 1)[1] == "on"
+    store.set_saxophone(callback.from_user.id, saxophone)
+    long_side = store.get_long_side(callback.from_user.id)
+    padding = store.get_padding(callback.from_user.id)
+    await callback.message.edit_text(
+        settings_text(padding, long_side, config.default_padding, config.default_long_side, saxophone),
+        parse_mode=ParseMode.HTML,
+        reply_markup=settings_keyboard(padding, long_side, config, saxophone),
+    )
+    await callback.answer(f"Паддинг: {padding}px")
 
 @router.callback_query(F.data == SETTINGS_EXAMPLES_CALLBACK)
 async def show_settings_examples(callback: CallbackQuery, store: SettingsStore, config: AppConfig) -> None:
@@ -349,6 +364,7 @@ async def emoji_group_command(
     store: SettingsStore,
     config: AppConfig,
     job_limiter: JobLimiter,
+    saxophone: list[str]
 ) -> None:
     if message.chat.type not in GROUP_CHAT_TYPES or message.from_user is None:
         return
@@ -364,7 +380,7 @@ async def emoji_group_command(
     try:
         file_id, media_kind, suffix = _message_file(source)
     except MediaError:
-        await _build_group_pack_from_non_file(message, source, status, store, config, job_limiter, owner_user_id)
+        await _build_group_pack_from_non_file(message, source, status, store, config, job_limiter, owner_user_id, saxophone)
         return
 
     await build_pack_from_file(
@@ -375,6 +391,7 @@ async def emoji_group_command(
         file_id,
         media_kind,
         suffix,
+        saxophone,
         group_grid_text(message, source),
         owner_user_id=owner_user_id,
         existing_progress_message=status,
@@ -392,6 +409,7 @@ async def _build_group_pack_from_non_file(
     config: AppConfig,
     job_limiter: JobLimiter,
     owner_user_id: int,
+    saxophone: list[str],
 ) -> None:
     try:
         custom_emoji_file = await _custom_emoji_file(source)
@@ -418,6 +436,7 @@ async def _build_group_pack_from_non_file(
             file_id,
             media_kind,
             suffix,
+            saxophone,
             group_grid_text(message, source) or source.text,
             needs_repainting=needs_repainting,
             owner_user_id=owner_user_id,
@@ -437,14 +456,14 @@ async def _build_group_pack_from_non_file(
 
 
 @router.message((F.chat.type == "private") & (F.photo | F.document | F.video | F.video_note | F.animation | F.sticker))
-async def handle_media(message: Message, store: SettingsStore, config: AppConfig, job_limiter: JobLimiter) -> None:
+async def handle_media(message: Message, store: SettingsStore, config: AppConfig, job_limiter: JobLimiter, saxophone: list[str]) -> None:
     try:
         file_id, media_kind, suffix = _message_file(message)
     except MediaError as error:
         await message.answer(str(error))
         return
 
-    await build_pack_from_file(message, store, config, job_limiter, file_id, media_kind, suffix, message.caption)
+    await build_pack_from_file(message, store, config, job_limiter, file_id, media_kind, suffix, saxophone, message.caption)
 
 
 @router.message((F.chat.type == "private") & F.text)
