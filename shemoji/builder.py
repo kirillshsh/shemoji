@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
+from random import choice
 import logging
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from aiogram import Bot
 from aiogram.enums import ParseMode
@@ -59,7 +62,7 @@ def tgs_wrong_file_type_message(grid: Grid, auto_grid: bool) -> str:
     if auto_grid:
         return (
             "Telegram не принял .TGS-плитки даже на уменьшенной сетке. "
-            "Попробуйте другой emoji или укажите сетку вручную, например 5x5."
+            "Попробуйте другой emoji или укажите сетку вручную, на 5x5."
         )
     return (
         f"Telegram не принял .TGS-плитки для сетки {grid.cols}x{grid.rows}. "
@@ -101,6 +104,7 @@ async def send_pack_result(
     sticker_set,
     batch,
     padding: int,
+    saxophone: list[str]
 ) -> None:
     url = sticker_set_url(sticker_set.name)
     ready_html = pack_ready_html(url, batch.grid.cols, batch.grid.rows, padding)
@@ -139,17 +143,26 @@ async def send_pack_result(
     )
 
     preview = custom_emoji_grid_html(sticker_set, batch.grid.cols)
+    
     if preview:
+        sax_lyric = ""
+        if store.get_saxophone(message.from_user.id):
+            sax_lyric = "\n\n"
+            dt = datetime.now(ZoneInfo("Europe/Moscow"))
+            if dt.hour == 0 and dt.minute == 0:
+                sax_lyric += "и ты сегодня нас не жди домооооой а на часах ноль ноль"
+            else:
+                sax_lyric += choice(saxophone)
         try:
             await message.answer(
-                preview,
+                preview + sax_lyric,
                 parse_mode=ParseMode.HTML,
                 reply_markup=separate_preview_keyboard(row_id),
             )
         except TelegramBadRequest:
             await message.answer(
                 "Не смог отправить превью custom emoji от имени бота. "
-                "Откройте пак по ссылке и соберите картинку вручную в посте."
+                "Откройте пак по ссылке и соберите картинку вручную в посте." + sax_lyric
             )
 
 
@@ -277,6 +290,7 @@ async def build_pack_from_file(
     file_id: str,
     media_kind: str,
     suffix: str,
+    saxophone: list[str],
     grid_text: str | None,
     needs_repainting: bool = False,
     owner_user_id: int | None = None,
@@ -350,7 +364,7 @@ async def build_pack_from_file(
                 pass
 
             if send_ready:
-                await send_pack_result(message, store, sticker_set, batch, padding)
+                await send_pack_result(message, store, sticker_set, batch, padding, saxophone)
             else:
                 await send_pack_preview_reply(result_reply_to or message, sticker_set, batch)
 

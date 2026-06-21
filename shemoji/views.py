@@ -66,6 +66,7 @@ def settings_text(
     current_long_side: int,
     default_padding: int,
     default_long_side: int,
+    saxophone: bool,
 ) -> str:
     padding_mark = " ⭐" if current_padding == default_padding else ""
     size_mark = " ⭐" if current_long_side == default_long_side else ""
@@ -73,10 +74,13 @@ def settings_text(
 
 • <b>Паддинг:</b> {current_padding}px{padding_mark} (по умолчанию — {default_padding}px)
 • <b>Размер:</b> {current_long_side}x{current_long_side}{size_mark} (по умолчанию — {default_long_side}x{default_long_side})
+• <b>Саксофон:</b> {"✅" if saxophone else "❌"} (по умолчанию — ❌)
 
 <tg-emoji emoji-id="5472146462362048818">💡</tg-emoji><b>Как это работает:</b>
 • <b>Паддинг:</b> Telegram по-разному рендерит эмодзи на ПК и телефонах — картинка может искажаться или разбиваться полосами. Паддинг добавляет невидимые отступы сверху и снизу, компенсируя эту разницу. Подбирается экспериментально.
-• <b>Размер:</b> Задает автоматическую сетку, если вы не указали её в подписи к файлу. Чем больше значение, тем больше эмодзи будет по длинной стороне и тем детальнее выйдет картинка."""
+• <b>Размер:</b> Задает автоматическую сетку, если вы не указали её в подписи к файлу. Чем больше значение, тем больше эмодзи будет по длинной стороне и тем детальнее выйдет картинка.
+• <b>Саксофон:</b> Саксофон
+"""
 
 
 def sticker_set_owned_by_bot(set_name: str, bot_username: str | None) -> bool:

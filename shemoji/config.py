@@ -12,6 +12,7 @@ class AppConfig:
     bot_token: str
     work_dir: Path = Path(".work")
     db_path: Path = Path("bot.sqlite3")
+    saxophone_path: Path = Path("saxophone.json")
     default_padding: int = 3
     max_padding: int = 5
     default_long_side: int = 3
@@ -42,4 +43,5 @@ def load_config() -> AppConfig:
         config,
         work_dir=root / config.work_dir,
         db_path=root / config.db_path,
+        saxophone_path=root / config.saxophone_path,
     )
