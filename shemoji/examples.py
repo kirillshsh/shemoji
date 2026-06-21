@@ -16,10 +16,13 @@ from .constants import PADDING_EXAMPLE_GRID, VK_SMILIES_SET_NAME
 from .keyboards import size_options
 from .media import Grid, MediaError, make_static_tiles
 from .stickers import TILE_EMOJI, create_custom_emoji_set
-from .storage import PaddingExampleSet, SettingsStore, SizeExampleSet
+from .storage import SettingsStore
 
 
 logger = logging.getLogger(__name__)
+PADDING_EXAMPLE_SET_KEY = "padding_examples"
+SIZE_EXAMPLE_SET_KEY = "size_examples"
+_example_pack_lock = asyncio.Lock()
 
 
 def _grid_example_html(title: str, ids: list[str], cols: int) -> str:
@@ -104,52 +107,63 @@ async def ensure_padding_example_set(
     user_id: int,
     force: bool = False,
 ) -> object:
-    existing = store.get_padding_example_set(user_id)
-    if existing and not force:
-        try:
-            return await bot.get_sticker_set(name=existing.set_name)
-        except TelegramBadRequest:
-            store.clear_padding_example_set(user_id)
-
-    me = await bot.get_me()
-    first = await _first_static_vk_sticker(bot)
-    temp_root = Path(tempfile.mkdtemp(prefix=f"padding_examples_{user_id}_", dir=config.work_dir))
-    try:
-        input_path = temp_root / "vk_first.webp"
-        telegram_file = await bot.get_file(first.file_id)
-        await bot.download_file(telegram_file.file_path, input_path)
-
-        paths: list[Path] = []
-        for padding in range(config.max_padding + 1):
-            batch = await asyncio.to_thread(
-                make_static_tiles,
-                input_path,
-                temp_root / f"padding_{padding}",
-                padding,
-                PADDING_EXAMPLE_GRID,
-                1,
-                config.max_tiles,
-            )
-            paths.extend(batch.paths)
-
-        sticker_set = await create_custom_emoji_set(
-            bot=bot,
-            user_id=user_id,
-            bot_username=me.username,
-            paths=paths,
-            sticker_format="static",
-            title="примеры паддинга",
-            upload_concurrency=config.telegram_upload_concurrency,
-        )
-        if existing:
+    if not force:
+        existing_name = store.get_global_example_set(PADDING_EXAMPLE_SET_KEY)
+        if existing_name:
             try:
-                await bot.delete_sticker_set(name=existing.set_name)
+                return await bot.get_sticker_set(name=existing_name)
             except TelegramBadRequest:
-                pass
-        store.save_padding_example_set(PaddingExampleSet(user_id=user_id, set_name=sticker_set.name))
-        return sticker_set
-    finally:
-        shutil.rmtree(temp_root, ignore_errors=True)
+                store.clear_global_example_set(PADDING_EXAMPLE_SET_KEY)
+
+    async with _example_pack_lock:
+        if not force:
+            existing_name = store.get_global_example_set(PADDING_EXAMPLE_SET_KEY)
+            if existing_name:
+                try:
+                    return await bot.get_sticker_set(name=existing_name)
+                except TelegramBadRequest:
+                    store.clear_global_example_set(PADDING_EXAMPLE_SET_KEY)
+
+        me = await bot.get_me()
+        first = await _first_static_vk_sticker(bot)
+        temp_root = Path(tempfile.mkdtemp(prefix=f"padding_examples_{user_id}_", dir=config.work_dir))
+        try:
+            input_path = temp_root / "vk_first.webp"
+            telegram_file = await bot.get_file(first.file_id)
+            await bot.download_file(telegram_file.file_path, input_path)
+
+            paths: list[Path] = []
+            for padding in range(config.max_padding + 1):
+                batch = await asyncio.to_thread(
+                    make_static_tiles,
+                    input_path,
+                    temp_root / f"padding_{padding}",
+                    padding,
+                    PADDING_EXAMPLE_GRID,
+                    1,
+                    config.max_tiles,
+                )
+                paths.extend(batch.paths)
+
+            sticker_set = await create_custom_emoji_set(
+                bot=bot,
+                user_id=user_id,
+                bot_username=me.username,
+                paths=paths,
+                sticker_format="static",
+                title="примеры паддинга",
+                upload_concurrency=config.telegram_upload_concurrency,
+            )
+            old_name = store.get_global_example_set(PADDING_EXAMPLE_SET_KEY)
+            if old_name and old_name != sticker_set.name:
+                try:
+                    await bot.delete_sticker_set(name=old_name)
+                except TelegramBadRequest:
+                    pass
+            store.save_global_example_set(PADDING_EXAMPLE_SET_KEY, sticker_set.name)
+            return sticker_set
+        finally:
+            shutil.rmtree(temp_root, ignore_errors=True)
 
 
 async def ensure_size_example_set(
@@ -159,52 +173,63 @@ async def ensure_size_example_set(
     user_id: int,
     force: bool = False,
 ) -> object:
-    existing = store.get_size_example_set(user_id)
-    if existing and not force:
-        try:
-            return await bot.get_sticker_set(name=existing.set_name)
-        except TelegramBadRequest:
-            store.clear_size_example_set(user_id)
-
-    me = await bot.get_me()
-    first = await _first_static_vk_sticker(bot)
-    temp_root = Path(tempfile.mkdtemp(prefix=f"size_examples_{user_id}_", dir=config.work_dir))
-    try:
-        input_path = temp_root / "vk_first.webp"
-        telegram_file = await bot.get_file(first.file_id)
-        await bot.download_file(telegram_file.file_path, input_path)
-
-        paths: list[Path] = []
-        for long_side in size_options(config):
-            batch = await asyncio.to_thread(
-                make_static_tiles,
-                input_path,
-                temp_root / f"size_{long_side}",
-                0,
-                Grid(cols=long_side, rows=long_side),
-                long_side,
-                config.max_tiles,
-            )
-            paths.extend(batch.paths)
-
-        sticker_set = await create_custom_emoji_set(
-            bot=bot,
-            user_id=user_id,
-            bot_username=me.username,
-            paths=paths,
-            sticker_format="static",
-            title="примеры размера",
-            upload_concurrency=config.telegram_upload_concurrency,
-        )
-        if existing:
+    if not force:
+        existing_name = store.get_global_example_set(SIZE_EXAMPLE_SET_KEY)
+        if existing_name:
             try:
-                await bot.delete_sticker_set(name=existing.set_name)
+                return await bot.get_sticker_set(name=existing_name)
             except TelegramBadRequest:
-                pass
-        store.save_size_example_set(SizeExampleSet(user_id=user_id, set_name=sticker_set.name))
-        return sticker_set
-    finally:
-        shutil.rmtree(temp_root, ignore_errors=True)
+                store.clear_global_example_set(SIZE_EXAMPLE_SET_KEY)
+
+    async with _example_pack_lock:
+        if not force:
+            existing_name = store.get_global_example_set(SIZE_EXAMPLE_SET_KEY)
+            if existing_name:
+                try:
+                    return await bot.get_sticker_set(name=existing_name)
+                except TelegramBadRequest:
+                    store.clear_global_example_set(SIZE_EXAMPLE_SET_KEY)
+
+        me = await bot.get_me()
+        first = await _first_static_vk_sticker(bot)
+        temp_root = Path(tempfile.mkdtemp(prefix=f"size_examples_{user_id}_", dir=config.work_dir))
+        try:
+            input_path = temp_root / "vk_first.webp"
+            telegram_file = await bot.get_file(first.file_id)
+            await bot.download_file(telegram_file.file_path, input_path)
+
+            paths: list[Path] = []
+            for long_side in size_options(config):
+                batch = await asyncio.to_thread(
+                    make_static_tiles,
+                    input_path,
+                    temp_root / f"size_{long_side}",
+                    0,
+                    Grid(cols=long_side, rows=long_side),
+                    long_side,
+                    config.max_tiles,
+                )
+                paths.extend(batch.paths)
+
+            sticker_set = await create_custom_emoji_set(
+                bot=bot,
+                user_id=user_id,
+                bot_username=me.username,
+                paths=paths,
+                sticker_format="static",
+                title="примеры размера",
+                upload_concurrency=config.telegram_upload_concurrency,
+            )
+            old_name = store.get_global_example_set(SIZE_EXAMPLE_SET_KEY)
+            if old_name and old_name != sticker_set.name:
+                try:
+                    await bot.delete_sticker_set(name=old_name)
+                except TelegramBadRequest:
+                    pass
+            store.save_global_example_set(SIZE_EXAMPLE_SET_KEY, sticker_set.name)
+            return sticker_set
+        finally:
+            shutil.rmtree(temp_root, ignore_errors=True)
 
 
 async def send_padding_examples_message(

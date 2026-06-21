@@ -72,6 +72,8 @@ class SettingsStore:
                 "UPDATE user_settings SET long_side = ? WHERE long_side IS NULL",
                 (self.default_long_side,),
             )
+        if "saxophone" not in columns:
+            self._conn.execute("ALTER TABLE user_settings ADD COLUMN saxophone INTEGER NOT NULL DEFAULT 0")
         self._conn.execute(
             """
             CREATE TABLE IF NOT EXISTS pack_messages (
@@ -95,6 +97,14 @@ class SettingsStore:
                 chat_id INTEGER NOT NULL,
                 pack_message_id INTEGER NOT NULL,
                 prompt_message_id INTEGER NOT NULL,
+                set_name TEXT NOT NULL
+            )
+            """
+        )
+        self._conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS global_example_sets (
+                key TEXT PRIMARY KEY,
                 set_name TEXT NOT NULL
             )
             """
@@ -315,6 +325,28 @@ class SettingsStore:
 
     def clear_pending_rename(self, user_id: int) -> None:
         self._conn.execute("DELETE FROM pending_renames WHERE user_id = ?", (user_id,))
+        self._conn.commit()
+
+    def get_global_example_set(self, key: str) -> str | None:
+        row = self._conn.execute(
+            "SELECT set_name FROM global_example_sets WHERE key = ?",
+            (key,),
+        ).fetchone()
+        return row[0] if row else None
+
+    def save_global_example_set(self, key: str, set_name: str) -> None:
+        self._conn.execute(
+            """
+            INSERT INTO global_example_sets(key, set_name)
+            VALUES(?, ?)
+            ON CONFLICT(key) DO UPDATE SET set_name = excluded.set_name
+            """,
+            (key, set_name),
+        )
+        self._conn.commit()
+
+    def clear_global_example_set(self, key: str) -> None:
+        self._conn.execute("DELETE FROM global_example_sets WHERE key = ?", (key,))
         self._conn.commit()
 
     def get_padding_example_set(self, user_id: int) -> PaddingExampleSet | None:
