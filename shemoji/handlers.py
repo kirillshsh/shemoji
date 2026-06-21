@@ -208,7 +208,7 @@ async def set_saxophone_callback(callback: CallbackQuery, store: SettingsStore, 
         parse_mode=ParseMode.HTML,
         reply_markup=settings_keyboard(padding, long_side, config, saxophone),
     )
-    await callback.answer(f"Паддинг: {padding}px")
+    await callback.answer(f"Саксофон: {'✅' if saxophone else '❌'}")
 
 @router.callback_query(F.data == SETTINGS_EXAMPLES_CALLBACK)
 async def show_settings_examples(callback: CallbackQuery, store: SettingsStore, config: AppConfig) -> None:

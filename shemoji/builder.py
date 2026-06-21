@@ -62,7 +62,7 @@ def tgs_wrong_file_type_message(grid: Grid, auto_grid: bool) -> str:
     if auto_grid:
         return (
             "Telegram не принял .TGS-плитки даже на уменьшенной сетке. "
-            "Попробуйте другой emoji или укажите сетку вручную, на 5x5."
+            "Попробуйте другой emoji или укажите сетку вручную, например 5x5."
         )
     return (
         f"Telegram не принял .TGS-плитки для сетки {grid.cols}x{grid.rows}. "

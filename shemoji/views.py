@@ -74,7 +74,7 @@ def settings_text(
 
 • <b>Паддинг:</b> {current_padding}px{padding_mark} (по умолчанию — {default_padding}px)
 • <b>Размер:</b> {current_long_side}x{current_long_side}{size_mark} (по умолчанию — {default_long_side}x{default_long_side})
-• <b>Саксофон:</b> {"✅" if saxophone else "❌"} (по умолчанию — ❌)
+• <b>Саксофон:</b> {"✅" if saxophone else "❌"}
 
 <tg-emoji emoji-id="5472146462362048818">💡</tg-emoji><b>Как это работает:</b>
 • <b>Паддинг:</b> Telegram по-разному рендерит эмодзи на ПК и телефонах — картинка может искажаться или разбиваться полосами. Паддинг добавляет невидимые отступы сверху и снизу, компенсируя эту разницу. Подбирается экспериментально.
